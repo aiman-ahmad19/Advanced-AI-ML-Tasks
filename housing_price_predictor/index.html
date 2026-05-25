@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multimodal ML - Housing Price Predictor</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: rgba(22, 27, 34, 0.7);
+            --border-color: rgba(48, 54, 61, 0.8);
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-cyan: #39d353;
+            --accent-purple: #ab7df8;
+            --accent-orange: #ff9f43;
+            --card-glow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(88, 166, 255, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(171, 125, 248, 0.08) 0px, transparent 50%);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: rgba(22, 27, 34, 0.6);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            box-shadow: 0 0 10px var(--accent-blue);
+        }
+
+        .badge {
+            background-color: rgba(88, 166, 255, 0.15);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            color: var(--accent-blue);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        main {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 1.9fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--card-glow);
+        }
+
+        .panel-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Sample Selector */
+        .sample-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            max-height: 220px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .sample-card {
+            background-color: rgba(33, 38, 45, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 4px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .sample-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        .sample-card.active {
+            border-color: var(--accent-purple);
+            background-color: rgba(171, 125, 248, 0.1);
+            box-shadow: 0 0 10px rgba(171, 125, 248, 0.2);
+        }
+
+        .sample-card img {
+            width: 100%;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .sample-card .price {
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        /* Controls Form */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .form-control-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            accent-color: var(--accent-blue);
+        }
+
+        .range-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            width: 50px;
+            text-align: right;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            background-color: #161b22;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        select:focus {
+            border-color: var(--accent-blue);
+        }
+
+        /* Toggle switch */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: rgba(22, 27, 34, 0.5);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #30363d;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-cyan);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .btn-predict {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(88, 166, 255, 0.2);
+            margin-top: 1rem;
+        }
+
+        .btn-predict:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(171, 125, 248, 0.3);
+        }
+
+        /* Right Panel Tabs */
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px 20px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-blue);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--accent-blue);
+            box-shadow: 0 0 8px var(--accent-blue);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Predictions Tab Layout */
+        .predictions-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .predictions-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .image-preview-card {
+            background-color: rgba(22, 27, 34, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-preview-card img {
+            width: 100%;
+            max-width: 250px;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            background-color: #161b22;
+        }
+
+        .image-caption {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* Results Display */
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .price-card {
+            background-color: rgba(33, 38, 45, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .price-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+        }
+
+        .price-card.actual::before { background-color: var(--text-primary); }
+        .price-card.tabular::before { background-color: var(--accent-orange); }
+        .price-card.image::before { background-color: var(--accent-blue); }
+        .price-card.fused::before { 
+            background: linear-gradient(to bottom, var(--accent-blue), var(--accent-purple)); 
+        }
+
+        .price-card.fused {
+            background: rgba(171, 125, 248, 0.08);
+            border-color: rgba(171, 125, 248, 0.4);
+            box-shadow: 0 0 15px rgba(171, 125, 248, 0.1);
+        }
+
+        .price-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .price-label strong {
+            display: block;
+            font-size: 1rem;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 2px;
+        }
+
+        .price-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .price-card.fused .price-value {
+            color: #ab7df8;
+            text-shadow: 0 0 10px rgba(171, 125, 248, 0.3);
+        }
+
+        /* Error indicators */
+        .error-tag {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .error-tag.good { background-color: rgba(57, 211, 83, 0.15); color: var(--accent-cyan); border: 1px solid rgba(57, 211, 83, 0.3); }
+        .error-tag.bad { background-color: rgba(248, 81, 73, 0.15); color: #f85149; border: 1px solid rgba(248, 81, 73, 0.3); }
+
+        /* Tables & Plots */
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .plot-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .plot-container img {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: #161b22;
+        }
+
+        .plot-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .plot-title::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 12px;
+            background: var(--accent-blue);
+            border-radius: 3px;
+        }
+
+        .placeholder-text {
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 3rem 0;
+            font-style: italic;
+        }
+
+        /* Scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8b949e;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="badge">
+                Housing Price Predictor
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="dashboard-grid">
+            <!-- Left Controls Panel -->
+            <div class="panel">
+                <div class="panel-title">
+                    <span>Config Parameters</span>
+                    <span class="badge" style="background-color: rgba(171, 125, 248, 0.15); color: var(--accent-purple); border-color: rgba(171, 125, 248, 0.3);">Features</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Select Test Sample House (Auto-Populate)</label>
+                    <div id="sampleGrid" class="sample-grid">
+                        <!-- Filled by javascript -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="area">Square Footage (sqft)</label>
+                    <div class="range-container">
+                        <input type="range" id="area" min="1000" max="5000" step="50" value="2500">
+                        <span id="areaVal" class="range-value">2500</span>
+                    </div>
+                </div>
+
+                <div class="form-control-row">
+                    <div class="form-group">
+                        <label for="bedrooms">Bedrooms</label>
+                        <select id="bedrooms">
+                            <option value="1">1 Bed</option>
+                            <option value="2">2 Beds</option>
+                            <option value="3" selected>3 Beds</option>
+                            <option value="4">4 Beds</option>
+                            <option value="5">5 Beds</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bathrooms">Bathrooms</label>
+                        <select id="bathrooms">
+                            <option value="1">1 Bath</option>
+                            <option value="2" selected>2 Baths</option>
+                            <option value="3">3 Baths</option>
+                            <option value="4">4 Baths</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-control-row">
+                    <div class="form-group">
+                        <label for="stories">Stories (Floors)</label>
+                        <select id="stories">
+                            <option value="1">1 Story</option>
+                            <option value="2" selected>2 Stories</option>
+                            <option value="3">3 Stories</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="quality">Material & Finish Quality</label>
+                        <select id="quality">
+                            <option value="1">Budget (Beige/Tan)</option>
+                            <option value="2" selected>Standard (Red/Brick)</option>
+                            <option value="3">Premium (Slate Gray)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Pool Status</label>
+                    <div class="switch-container">
+                        <span style="font-size: 0.9rem;">Backyard Swimming Pool</span>
+                        <label class="switch">
+                            <input type="checkbox" id="hasPool" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="predictBtn" class="btn-predict">Predict House Price</button>
+            </div>
+
+            <!-- Right Results & Analytics Panel -->
+            <div class="panel">
+                <div class="tabs-header">
+                    <button class="tab-btn active" onclick="switchTab('predictions')">Real-time Predictor</button>
+                    <button class="tab-btn" onclick="switchTab('metrics')">Model Metrics</button>
+                    <button class="tab-btn" onclick="switchTab('history')">Training History</button>
+                </div>
+
+                <!-- Predictions Tab -->
+                <div id="predictionsTab" class="tab-content active">
+                    <div class="predictions-layout">
+                        <!-- Image representation preview -->
+                        <div class="image-preview-card">
+                            <div class="plot-title" style="margin-bottom: 12px;">Visual Modality</div>
+                            <img id="houseImg" src="data/images/house_0.png" alt="House drawing">
+                            <div class="image-caption">
+                                Image dynamically changes when samples are selected. Visual properties (height, color, pool) correlate to model inputs.
+                            </div>
+                        </div>
+
+                        <!-- Price cards -->
+                        <div class="results-container">
+                            <div class="plot-title">Modality Predictions</div>
+                            
+                            <div class="price-card actual">
+                                <div class="price-label">
+                                    <strong>Actual Price</strong>
+                                    Ground Truth (CSV value)
+                                </div>
+                                <div id="actualVal" class="price-value">$---,---</div>
+                            </div>
+
+                            <div class="price-card tabular">
+                                <div class="price-label">
+                                    <strong>Tabular MLP</strong>
+                                    Structured metrics only
+                                    <span id="tabError" class="error-tag"></span>
+                                </div>
+                                <div id="tabVal" class="price-value">$---,---</div>
+                            </div>
+
+                            <div class="price-card image">
+                                <div class="price-label">
+                                    <strong>Image CNN</strong>
+                                    Visual elements only
+                                    <span id="imgError" class="error-tag"></span>
+                                </div>
+                                <div id="imgVal" class="price-value">$---,---</div>
+                            </div>
+
+                            <div class="price-card fused">
+                                <div class="price-label">
+                                    <strong>Multimodal Fusion</strong>
+                                    Image features + Tabular features
+                                    <span id="fusedError" class="error-tag"></span>
+                                </div>
+                                <div id="fusedVal" class="price-value">$---,---</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metrics Tab -->
+                <div id="metricsTab" class="tab-content">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Model Modality</th>
+                                    <th>Mean Absolute Error (MAE)</th>
+                                    <th>Root Mean Squared Error (RMSE)</th>
+                                    <th>R² Score (Variance Explained)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="metricsBody">
+                                <tr>
+                                    <td colspan="4" class="placeholder-text">Loading metrics...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="plot-container">
+                        <div>
+                            <div class="plot-title">Error Comparison (MAE and RMSE)</div>
+                            <img src="plots/metrics_comparison.png" alt="Metrics Comparison Bar Chart">
+                        </div>
+                        <div>
+                            <div class="plot-title">Predictions Scatter Plot (Actual vs Predicted)</div>
+                            <img src="plots/predictions_scatter.png" alt="Predictions Scatter Plot">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Training History Tab -->
+                <div id="historyTab" class="tab-content">
+                    <div class="plot-container">
+                        <div>
+                            <div class="plot-title">Training Loss Curves (Mean Squared Error per Epoch)</div>
+                            <img src="plots/loss_curves.png" alt="Training Loss Curves">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentSamples = [];
+        let selectedHouseId = null;
+
+        // Init UI listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            const areaRange = document.getElementById('area');
+            const areaVal = document.getElementById('areaVal');
+            
+            areaRange.addEventListener('input', () => {
+                areaVal.textContent = areaRange.value;
+                clearSelectedSample();
+            });
+
+            const inputs = ['bedrooms', 'bathrooms', 'stories', 'quality', 'hasPool'];
+            inputs.forEach(id => {
+                document.getElementById(id).addEventListener('change', clearSelectedSample);
+            });
+
+            document.getElementById('predictBtn').addEventListener('click', runPredict);
+
+            // Fetch initial data
+            loadSamples();
+            loadMetricsTable();
+        });
+
+        function switchTab(tabId) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+
+            // Set active
+            event.currentTarget.classList.add('active');
+            document.getElementById(`${tabId}Tab`).classList.add('active');
+        }
+
+        async function loadSamples() {
+            try {
+                const res = await fetch('/api/samples');
+                const data = await res.json();
+                currentSamples = data;
+                
+                const grid = document.getElementById('sampleGrid');
+                grid.innerHTML = '';
+
+                data.forEach((house, idx) => {
+                    const card = document.createElement('div');
+                    card.className = `sample-card ${idx === 0 ? 'active' : ''}`;
+                    card.onclick = () => selectSample(house, card);
+                    card.innerHTML = `
+                        <img src="/data/images/house_${house.house_id}.png" alt="House">
+                        <div class="price">$${Math.round(house.price / 1000)}k</div>
+                    `;
+                    grid.appendChild(card);
+                });
+
+                // Auto-select first sample
+                if (data.length > 0) {
+                    selectSample(data[0], grid.children[0]);
+                }
+            } catch (err) {
+                console.error("Error loading samples:", err);
+            }
+        }
+
+        function selectSample(house, cardElement) {
+            // Update active styling
+            document.querySelectorAll('.sample-card').forEach(c => c.classList.remove('active'));
+            cardElement.classList.add('active');
+
+            selectedHouseId = house.house_id;
+            
+            // Populate inputs
+            document.getElementById('area').value = house.area;
+            document.getElementById('areaVal').textContent = house.area;
+            document.getElementById('bedrooms').value = house.bedrooms;
+            document.getElementById('bathrooms').value = house.bathrooms;
+            document.getElementById('stories').value = house.stories;
+            document.getElementById('quality').value = house.quality;
+            document.getElementById('hasPool').checked = house.has_pool === 1;
+
+            // Update preview image
+            document.getElementById('houseImg').src = `/data/images/house_${house.house_id}.png`;
+            
+            // Run prediction immediately for sample
+            runPredict();
+        }
+
+        function clearSelectedSample() {
+            document.querySelectorAll('.sample-card').forEach(c => c.classList.remove('active'));
+            selectedHouseId = null;
+            // Clear actual price display since inputs are now custom
+            document.getElementById('actualVal').textContent = "$---,---";
+            document.getElementById('tabError').innerHTML = '';
+            document.getElementById('imgError').innerHTML = '';
+            document.getElementById('fusedError').innerHTML = '';
+        }
+
+        async function runPredict() {
+            const body = {
+                house_id: selectedHouseId,
+                area: parseFloat(document.getElementById('area').value),
+                bedrooms: parseFloat(document.getElementById('bedrooms').value),
+                bathrooms: parseFloat(document.getElementById('bathrooms').value),
+                stories: parseFloat(document.getElementById('stories').value),
+                has_pool: document.getElementById('hasPool').checked ? 1.0 : 0.0,
+                quality: parseInt(document.getElementById('quality').value)
+            };
+
+            // Set loading text
+            document.getElementById('tabVal').textContent = "Predicting...";
+            document.getElementById('imgVal').textContent = "Predicting...";
+            document.getElementById('fusedVal').textContent = "Predicting...";
+
+            try {
+                const res = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                
+                const result = await res.json();
+                
+                if (result.error) {
+                    alert(result.error);
+                    return;
+                }
+
+                const formatUSD = val => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+
+                // Update predictions
+                const preds = result.predictions;
+                document.getElementById('tabVal').textContent = formatUSD(preds.tabular_only);
+                document.getElementById('imgVal').textContent = formatUSD(preds.image_only);
+                document.getElementById('fusedVal').textContent = formatUSD(preds.multimodal);
+
+                // Handle ground truth if available
+                if (result.actual_price !== null) {
+                    const actual = result.actual_price;
+                    document.getElementById('actualVal').textContent = formatUSD(actual);
+                    
+                    // Show error tags
+                    updateErrorTag('tabError', preds.tabular_only, actual);
+                    updateErrorTag('imgError', preds.image_only, actual);
+                    updateErrorTag('fusedError', preds.multimodal, actual);
+                } else {
+                    document.getElementById('actualVal').textContent = "$---,---";
+                }
+            } catch (err) {
+                console.error("Prediction failed:", err);
+            }
+        }
+
+        function updateErrorTag(elementId, predicted, actual) {
+            const errElem = document.getElementById(elementId);
+            const errDiff = Math.abs(predicted - actual);
+            const pct = (errDiff / actual) * 100;
+            
+            const isGood = pct < 5.0; // below 5% error is considered "Good"
+            errElem.className = `error-tag ${isGood ? 'good' : 'bad'}`;
+            errElem.innerHTML = `Err: ${pct.toFixed(1)}% (${isGood ? 'Excellent' : 'High'})`;
+        }
+
+        async function loadMetricsTable() {
+            try {
+                const res = await fetch('/api/metrics');
+                const data = await res.json();
+                
+                if (data.metrics) {
+                    const body = document.getElementById('metricsBody');
+                    body.innerHTML = '';
+                    
+                    const formatUSD = val => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(val);
+                    
+                    for (const [model, metrics] of Object.entries(data.metrics)) {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="font-weight: 600;">${model.replace('_', ' ').toUpperCase()}</td>
+                            <td>${formatUSD(metrics['MAE ($)'])}</td>
+                            <td>${formatUSD(metrics['RMSE ($)'])}</td>
+                            <td style="font-family: monospace; font-weight: 600; color: ${metrics['R2 Score'] > 0.9 ? 'var(--accent-cyan)' : 'inherit'}">
+                                ${metrics['R2 Score'].toFixed(4)}
+                            </td>
+                        `;
+                        body.appendChild(tr);
+                    }
+                }
+            } catch (err) {
+                console.error("Error loading metrics:", err);
+            }
+        }
+    </script>
+</body>
+</html>
